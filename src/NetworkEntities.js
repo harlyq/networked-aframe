@@ -158,17 +158,21 @@ class NetworkEntities {
   removeEntitiesOfClient(clientId) {
     var entityList = [];
     for (var id in this.entities) {
-      var entityCreator = NAF.utils.getCreator(this.entities[id]);
+      var entity = this.entities[id];
+      var entityCreator = NAF.utils.getCreator(entity);
+      var entityOwner = NAF.utils.getNetworkOwner(entity);
       if (entityCreator === clientId) {
-        let persists;
-        const component = this.entities[id].getAttribute('networked');
+        var persists = void 0;
+        var component = entity.getAttribute('networked');
         if (component && component.persistent) {
-          persists = NAF.utils.takeOwnership(this.entities[id]);
+          persists = entityOwner !== clientId || NAF.utils.takeOwnership(entity);
         }
         if (!persists) {
           var entity = this.removeEntity(id);
           entityList.push(entity);
         }
+      } else if (entityOwner === clientId) {
+        NAF.utils.takeOwnership(entity);
       }
     }
     return entityList;
