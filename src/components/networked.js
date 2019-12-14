@@ -399,9 +399,23 @@ AFRAME.registerComponent('networked', {
   /* Receiving updates */
 
   networkUpdate: function(entityData) {
-    // Avoid updating components if the entity data received did not come from the current owner.
-    if (entityData.lastOwnerTime < this.lastOwnerTime ||
-          (this.lastOwnerTime === entityData.lastOwnerTime && this.data.owner > entityData.owner)) {
+    // The networkUpdate handles 3 cases:
+    //
+    // i) a non-firstsync update packet from the owner. entityData.lastOwnerTime and this.lastOwnerTime
+    // will be the same and entityData.owner will match this.data.owner
+    //
+    // ii) a firstsync from a new client with a fixed networkId.  The entityData.lastOwner time will be
+    // more recent than this.lastOwnerTime and entityData.owner (the new client) will not match 
+    // this.data.owner (existing client).  We will ignore the new client data in this case because
+    // it is too young
+    // 
+    // iii) a non-firstsync when a client performs a takeOwnership(), in this entityData.lastOwnerTime 
+    // is newer than the this.lastOwnerTime and we accept the new packet and change this.data.owner
+    if (entityData.isFirstSync && entityData.lastOwnerTime > 0 && this.lastOwnerTime > 0) {
+      if (entityData.lastOwnerTime > this.lastOwnerTime) {
+        return
+      }
+    } else if (entityData.lastOwnerTime < this.lastOwnerTime || (this.lastOwnerTime === entityData.lastOwnerTime && this.data.owner > entityData.owner) ) {
       return;
     }
 
